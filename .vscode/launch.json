@@ -2,6 +2,12 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "command": "pnpm dev",
+      "name": "pnpm dev",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
       "name": "Chrome: Nuxt",
       "type": "chrome",
       "request": "launch",

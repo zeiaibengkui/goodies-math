@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DistributionPoint, FactDistribution } from '~/types/probability'
 import { formatPercent } from '~/utils/format'
+import { plans, type Plan } from '~~/shared/plans'
 
 type Fact = {
   eyebrow: string
@@ -56,12 +57,25 @@ const drawCount = ref(0)
 const isDrawing = ref(false)
 const activeFactIndex = ref(0)
 const lastFactIndex = ref(0)
+const selectedPlan = ref<Plan | null>(null)
+const pendingPlan = ref<Plan | null>(null)
+const currentPlanId = ref<Plan['id'] | null>(null)
+const planMessage = ref('')
+const authMode = ref<'login' | 'register'>('login')
+const authName = ref('')
+const authEmail = ref('')
+const authPassword = ref('')
+const authError = ref('')
+const authPending = ref(false)
+const { status: authStatus, data: authSession, signIn, signOut, getSession } = useAuth()
 let drawTimer: ReturnType<typeof setTimeout> | undefined
 
 const digitSum = computed(() => digits.value.reduce((total, digit) => total + digit, 0))
 const distinctCount = computed(() => new Set(digits.value).size)
 const eightCount = computed(() => digits.value.filter((digit) => digit === 8).length)
 const oddCount = computed(() => digits.value.filter((digit) => digit % 2 === 1).length)
+const isAuthenticated = computed(() => authStatus.value === 'authenticated')
+const currentPlan = computed(() => plans.find((plan) => plan.id === currentPlanId.value) ?? null)
 
 const drawLabel = computed(() => {
   if (source.value === 'sample') return 'SAMPLE 000'
@@ -760,6 +774,151 @@ function scrollToLucky() {
   })
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (typeof error === 'object' && error !== null && 'data' in error) {
+    const data = (error as { data?: { statusMessage?: string; message?: string } }).data
+    return data?.statusMessage ?? data?.message ?? fallback
+  }
+  return fallback
+}
+
+async function loadCurrentPlan() {
+  try {
+    const result = await $fetch<{ plan: { id: string } | null }>('/api/plans/current')
+    const plan = result.plan ? plans.find((item) => item.id === result.plan?.id) : null
+    currentPlanId.value = plan?.id ?? null
+  } catch {
+    currentPlanId.value = null
+  }
+}
+
+async function selectPlan(plan: Plan) {
+  planMessage.value = ''
+  try {
+    await $fetch('/api/plans/select', {
+      method: 'POST',
+      body: { planId: plan.id }
+    })
+    currentPlanId.value = plan.id
+    selectedPlan.value = plan
+    planMessage.value = `已将「${plan.name}」保存到你的账户。`
+  } catch (error) {
+    planMessage.value = getErrorMessage(error, '方案保存失败，请稍后重试。')
+  }
+}
+
+async function choosePlan(plan: Plan) {
+  if (plan.free) {
+    selectedPlan.value = null
+    pendingPlan.value = null
+    scrollToLucky()
+    return
+  }
+
+  selectedPlan.value = plan
+  if (!isAuthenticated.value) {
+    pendingPlan.value = plan
+    authError.value = `登录后会自动保存「${plan.name}」方案。`
+    await nextTick()
+    document.getElementById('account-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    return
+  }
+
+  await selectPlan(plan)
+}
+
+function toggleAuthMode() {
+  authMode.value = authMode.value === 'login' ? 'register' : 'login'
+  authError.value = ''
+}
+
+async function submitAuth() {
+  authError.value = ''
+  planMessage.value = ''
+  authPending.value = true
+
+  try {
+    if (authMode.value === 'register') {
+      await $fetch('/api/auth/register', {
+        method: 'POST',
+        body: {
+          name: authName.value,
+          email: authEmail.value,
+          password: authPassword.value
+        }
+      })
+    }
+
+    const result = await signIn('credentials', {
+      email: authEmail.value.trim(),
+      password: authPassword.value,
+      redirect: false
+    })
+
+    if (result?.error) {
+      authError.value = result.error === 'CredentialsSignin' ? '邮箱或密码不正确。' : '登录失败，请重试。'
+      return
+    }
+
+    authPassword.value = ''
+    await getSession()
+    await loadCurrentPlan()
+
+    if (pendingPlan.value) {
+      const plan = pendingPlan.value
+      pendingPlan.value = null
+      await selectPlan(plan)
+    }
+  } catch (error) {
+    authError.value = getErrorMessage(error, '登录失败，请检查邮箱和密码。')
+  } finally {
+    authPending.value = false
+  }
+}
+
+async function logout() {
+  selectedPlan.value = null
+  pendingPlan.value = null
+  planMessage.value = ''
+
+  try {
+    await signOut({ callbackUrl: '/', redirect: false })
+  } catch {
+    const { csrfToken } = await $fetch<{ csrfToken: string }>('/api/auth/csrf')
+    await $fetch('/api/auth/signout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        csrfToken,
+        callbackUrl: '/',
+        json: 'true'
+      })
+    })
+  }
+
+  currentPlanId.value = null
+  await getSession()
+
+  if (import.meta.client) {
+    window.location.assign('/')
+  }
+}
+
+watch(
+  authStatus,
+  async (status) => {
+    if (!import.meta.client) return
+    if (status === 'authenticated') {
+      await loadCurrentPlan()
+    } else if (status === 'unauthenticated') {
+      currentPlanId.value = null
+    }
+  },
+  { immediate: true }
+)
+
 function draw(scroll = false) {
   if (isDrawing.value) return
   inputError.value = ''
@@ -817,6 +976,9 @@ onBeforeUnmount(() => {
             </div>
 
             <div class="d-flex align-items-center gap-2 font-monospace small">
+              <a href="#pricing" class="text-warning text-decoration-none fw-bolder border-bottom border-warning">
+                付费计划
+              </a>
               <BBadge variant="danger" class="border border-warning fw-bolder">LIVE ODDS</BBadge>
               <span class="text-white-50 d-none d-sm-inline">EST. 2026</span>
             </div>
@@ -1150,6 +1312,242 @@ onBeforeUnmount(() => {
                 </aside>
               </BCol>
             </BRow>
+          </BContainer>
+        </section>
+
+        <section
+          id="pricing"
+          class="py-5 bg-danger text-white border-top border-4 border-dark border-bottom border-4 border-dark"
+          aria-labelledby="pricing-title"
+        >
+          <BContainer>
+            <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-4">
+              <div class="flex-grow-1">
+                <p class="font-monospace text-warning fw-bolder small mb-2">04 / 付费计划</p>
+                <h2 id="pricing-title" class="display-5 fw-bolder mb-0">
+                  把预言，<br class="d-lg-none"><span class="text-warning">再往下读一层。</span>
+                </h2>
+              </div>
+              <p class="d-none d-lg-block font-monospace fw-bolder small mb-1">DEMO PRICING / 未接入支付</p>
+            </div>
+
+            <p class="fs-5 text-white mb-4">
+              三种演示方案，对应不同深度的数字解读。所有概率内容仍可免费查看。
+            </p>
+
+            <div id="account-panel" class="bg-dark text-white border border-3 border-warning p-3 p-md-4 mb-4">
+              <div
+                v-if="isAuthenticated"
+                class="d-flex flex-wrap align-items-start justify-content-between gap-3"
+              >
+                <div>
+                  <p class="font-monospace small text-warning fw-bolder mb-1">ACCOUNT / 账户</p>
+                  <p class="h5 fw-bolder mb-1">{{ authSession?.user?.email }}</p>
+                  <p class="small text-white-50 mb-0">
+                    当前方案：
+                    <span class="text-warning fw-bolder">{{ currentPlan?.name ?? '未选择付费方案' }}</span>
+                  </p>
+                  <p v-if="planMessage" class="small text-warning fw-bolder mt-2 mb-0" role="status">
+                    {{ planMessage }}
+                  </p>
+                </div>
+                <BButton
+                  squared
+                  class="bg-white text-dark border-3 border-warning fw-bolder font-monospace"
+                  @click="logout"
+                >
+                  退出登录
+                </BButton>
+              </div>
+
+              <form v-else @submit.prevent="submitAuth">
+                <div class="row g-3 align-items-end">
+                  <div class="col-lg-4">
+                    <p class="font-monospace small text-warning fw-bolder mb-1">ACCOUNT / 账户</p>
+                    <p class="h4 fw-bolder text-white mb-0">登录后保存方案</p>
+                    <p class="small text-white-50 mt-2 mb-0">
+                      账号与方案存入本地 PGlite；密码使用 scrypt 加盐哈希。
+                    </p>
+                  </div>
+
+                  <div class="col-lg-8">
+                    <div class="row g-2">
+                      <div v-if="authMode === 'register'" class="col-md-4">
+                        <label for="auth-name" class="form-label small font-monospace text-warning fw-bolder mb-1">
+                          昵称
+                        </label>
+                        <BFormInput
+                          id="auth-name"
+                          v-model="authName"
+                          autocomplete="nickname"
+                          maxlength="40"
+                          class="border-2 border-warning font-monospace"
+                        />
+                      </div>
+
+                      <div class="col-md-4">
+                        <label for="auth-email" class="form-label small font-monospace text-warning fw-bolder mb-1">
+                          邮箱
+                        </label>
+                        <BFormInput
+                          id="auth-email"
+                          v-model="authEmail"
+                          type="email"
+                          autocomplete="email"
+                          maxlength="254"
+                          required
+                          class="border-2 border-warning font-monospace"
+                        />
+                      </div>
+
+                      <div class="col-md-4">
+                        <label for="auth-password" class="form-label small font-monospace text-warning fw-bolder mb-1">
+                          密码
+                        </label>
+                        <BFormInput
+                          id="auth-password"
+                          v-model="authPassword"
+                          type="password"
+                          :autocomplete="authMode === 'register' ? 'new-password' : 'current-password'"
+                          minlength="8"
+                          maxlength="128"
+                          required
+                          class="border-2 border-warning font-monospace"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+                      <BButton
+                        type="submit"
+                        squared
+                        :disabled="authPending"
+                        class="bg-warning text-dark border-3 border-dark fw-bolder font-monospace"
+                      >
+                        {{ authPending ? '处理中…' : authMode === 'login' ? '登录' : '注册并登录' }}
+                      </BButton>
+                      <BButton
+                        type="button"
+                        squared
+                        class="bg-white text-dark border-3 border-warning fw-bolder font-monospace"
+                        @click="toggleAuthMode"
+                      >
+                        {{ authMode === 'login' ? '没有账号？注册' : '已有账号？登录' }}
+                      </BButton>
+                    </div>
+
+                    <p v-if="authError" role="alert" class="small text-warning fw-bolder mt-2 mb-0">
+                      {{ authError }}
+                    </p>
+                    <p v-else class="small text-white-50 mt-2 mb-0">
+                      密码至少 8 位。登录后回到这里继续选择方案。
+                    </p>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            <BRow class="g-4">
+              <BCol v-for="(plan, index) in plans" :key="plan.name" lg="4">
+                <article
+                  class="h-100 d-flex flex-column border border-3 border-dark shadow-lg"
+                  :class="plan.featured ? 'bg-warning text-dark' : 'bg-white text-dark'"
+                >
+                  <header
+                    class="p-3 p-md-4 border-bottom border-3 border-dark d-flex justify-content-between align-items-start gap-3"
+                  >
+                    <div>
+                      <p class="font-monospace small fw-bolder mb-1">{{ plan.code }}</p>
+                      <h3 class="h4 fw-bolder mb-0">{{ plan.name }}</h3>
+                    </div>
+                    <BBadge
+                      v-if="currentPlan?.id === plan.id"
+                      variant="dark"
+                      class="border border-dark font-monospace"
+                    >
+                      当前方案
+                    </BBadge>
+                    <BBadge v-else-if="plan.featured" variant="danger" class="border border-dark font-monospace">
+                      推荐
+                    </BBadge>
+                    <span v-else class="font-monospace small fw-bolder">0{{ index + 1 }}</span>
+                  </header>
+
+                  <div class="p-3 p-md-4 d-flex flex-column flex-grow-1">
+                    <p class="mb-3">{{ plan.description }}</p>
+                    <div class="d-flex align-items-end gap-2 mb-4">
+                      <span class="display-4 fw-bolder font-monospace lh-1">{{ plan.price }}</span>
+                      <span class="font-monospace small mb-1">{{ plan.period }}</span>
+                    </div>
+
+                    <ul class="list-unstyled small flex-grow-1 mb-4">
+                      <li
+                        v-for="feature in plan.features"
+                        :key="feature"
+                        class="d-flex gap-2 py-2 border-top border-dark-subtle"
+                      >
+                        <span class="text-danger fw-bolder" aria-hidden="true">✓</span>
+                        <span>{{ feature }}</span>
+                      </li>
+                    </ul>
+
+                    <BButton
+                      squared
+                      :disabled="currentPlan?.id === plan.id"
+                      class="w-100 border-3 border-dark fw-bolder font-monospace"
+                      :class="plan.featured ? 'bg-danger text-white' : 'bg-primary text-dark'"
+                      @click="choosePlan(plan)"
+                    >
+                      {{ currentPlan?.id === plan.id ? '当前方案' : plan.cta }}
+                    </BButton>
+                  </div>
+                </article>
+              </BCol>
+            </BRow>
+
+            <div
+              v-if="selectedPlan"
+              class="bg-warning text-dark border border-3 border-dark mt-4 p-3 p-md-4"
+              role="status"
+            >
+              <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                <div>
+                  <p class="font-monospace small fw-bolder text-danger mb-1">PLAN SELECTED / 已选择</p>
+                  <p class="h5 fw-bolder mb-1">
+                    {{ selectedPlan.name }} · {{ selectedPlan.price }} {{ selectedPlan.period }}
+                  </p>
+                  <p v-if="currentPlan?.id === selectedPlan.id" class="small mb-0">
+                    方案已保存到你的账户。支付仍未接入，不会产生扣款。
+                  </p>
+                  <p v-else-if="isAuthenticated" class="small mb-0">
+                    正在保存方案；若失败，请查看上方账户提示。本页不会产生扣款。
+                  </p>
+                  <p v-else class="small mb-0">
+                    登录后会自动保存该方案；本页尚未接入支付，不会产生扣款。
+                  </p>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                  <BButton
+                    squared
+                    class="bg-dark text-warning border-3 border-dark fw-bolder font-monospace"
+                    @click="scrollToLucky"
+                  >
+                    先体验 →
+                  </BButton>
+                  <BButton
+                    squared
+                    class="bg-white text-dark border-3 border-dark fw-bolder font-monospace"
+                    @click="selectedPlan = null"
+                  >
+                    取消
+                  </BButton>
+                </div>
+              </div>
+            </div>
+
+            <p class="small text-white mt-4 mb-0">
+              演示价仅用于界面展示；支付、订阅与权益发放均未接入。本页不构成任何投注建议。
+            </p>
           </BContainer>
         </section>
       </main>
