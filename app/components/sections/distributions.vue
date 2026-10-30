@@ -8,6 +8,43 @@ import {
 } from '~/utils/distributions'
 
 const lucky = useLuckyStore()
+const numberInput = ref('')
+const inputError = ref('')
+
+watch(numberInput, (value) => {
+  const sanitized = value.replace(/\D/g, '').slice(0, 10)
+  if (sanitized !== value) numberInput.value = sanitized
+  if (inputError.value) inputError.value = ''
+})
+
+function scrollToLucky() {
+  if (!import.meta.client) return
+  void nextTick(() => {
+    document.getElementById('lucky-reading')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
+}
+
+function readNumber() {
+  const value = numberInput.value.trim()
+
+  if (!/^\d{10}$/.test(value)) {
+    inputError.value = '请输入恰好 10 位数字（0–9），允许前导 0。'
+    return
+  }
+
+  inputError.value = ''
+  lucky.reveal(
+    value.split('').map((digit) => Number(digit)),
+    'custom'
+  )
+  scrollToLucky()
+}
+
+function setDigit(index: number, value: unknown) {
+  const digit = Number(value)
+  if (!Number.isInteger(digit)) return
+  lucky.setDigit(index, digit)
+}
 
 function setDistribution(index: number, value: unknown) {
   if (typeof value !== 'string') return
@@ -41,9 +78,52 @@ function formatSeedTimestamp(timestamp: number) {
       </div>
 
       <p class="section-lead mb-4">
-        默认每位都是均匀分布。把任意一位改成二项、泊松或正态分布，开号器会按该位置的分布独立抽样。
+        真实中奖号码为均匀分布，因此分析采用均匀分布。你可以直接输入整串号码，或在下方逐位选择数字；
+        也可以把任意一位改成二项、泊松或正态分布，开号器会按该位置的分布独立抽样。
         数学注脚仍以均匀 0–9 为基线，便于对照。
       </p>
+
+      <form class="oracle-form" @submit.prevent="readNumber">
+        <div class="row g-3 align-items-end">
+          <div class="col-lg-4">
+            <p class="kicker kicker--warning mb-1">YOUR NUMBER / 自选号码</p>
+            <label for="lucky-number" class="h4 fw-bolder text-white d-block mb-0">
+              输入整串十位号码
+            </label>
+          </div>
+          <div class="col-lg-8">
+            <div class="input-group">
+              <BFormInput
+                id="lucky-number"
+                v-model="numberInput"
+                inputmode="numeric"
+                autocomplete="off"
+                maxlength="10"
+                placeholder="例如 1234567890"
+                aria-describedby="lucky-number-help"
+                :aria-invalid="inputError ? 'true' : undefined"
+                class="oracle-input"
+              />
+              <BButton type="submit" variant="warning">
+                <span class="d-none d-sm-inline">填入号码</span>
+                <span class="d-sm-none">填入</span>
+                →
+              </BButton>
+            </div>
+            <p
+              v-if="inputError"
+              id="lucky-number-help"
+              role="alert"
+              class="small text-warning fw-bolder mt-2 mb-0"
+            >
+              {{ inputError }}
+            </p>
+            <p v-else id="lucky-number-help" class="small text-white-50 mt-2 mb-0">
+              恰好 10 位数字，允许前导 0。填入后也可以在下方逐位微调。
+            </p>
+          </div>
+        </div>
+      </form>
 
       <div class="panel distribution-studio">
         <BRow class="g-3 row-cols-2 row-cols-md-3 row-cols-xl-5">
@@ -54,7 +134,18 @@ function formatSeedTimestamp(timestamp: number) {
             <div class="dist-card">
               <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
                 <span class="dist-index">#{{ index + 1 }}</span>
-                <span class="dist-current">{{ lucky.digits[index] }}</span>
+                <BFormSelect
+                  :id="`digit-${index}`"
+                  :model-value="String(lucky.digits[index])"
+                  :aria-label="`第 ${index + 1} 位数字`"
+                  size="sm"
+                  class="dist-digit-select"
+                  @update:model-value="(value) => setDigit(index, value)"
+                >
+                  <option v-for="digit in 10" :key="digit" :value="String(digit - 1)">
+                    {{ digit - 1 }}
+                  </option>
+                </BFormSelect>
               </div>
 
               <BFormSelect

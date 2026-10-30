@@ -37,6 +37,15 @@ $body-color: #1c150d;
   background: $primary;
 }
 
+section[id],
+#account-panel {
+  scroll-margin-top: 8rem;
+
+  @media (min-width: 768px) {
+    scroll-margin-top: 5rem;
+  }
+}
+
 .band {
   padding: 3rem 0;
 
@@ -683,16 +692,15 @@ $body-color: #1c150d;
   color: $danger;
 }
 
-.dist-current {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
+.dist-digit-select {
+  width: 4.25rem;
   font-family: var(--bs-font-monospace);
+  font-size: 1rem;
   font-weight: 800;
-  color: $warning;
-  background: $dark;
+  color: $dark;
+  background-color: $warning;
+  border: 2px solid $dark;
+  border-radius: 0;
 }
 
 .dist-select {

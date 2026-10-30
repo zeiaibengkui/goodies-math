@@ -67,6 +67,13 @@ export const useLuckyStore = defineStore('lucky', () => {
     drawCount.value += 1
   }
 
+  function setDigit(index: number, digit: number) {
+    if (index < 0 || index >= digits.value.length) return
+    if (!Number.isInteger(digit) || digit < 0 || digit > 9) return
+    digits.value = digits.value.map((current, position) => (position === index ? digit : current))
+    source.value = 'custom'
+  }
+
   function setDigitDistribution(index: number, distribution: DigitDistributionId) {
     if (index < 0 || index >= digitDistributions.value.length) return
     if (!DIGIT_DISTRIBUTIONS[distribution]) return
@@ -194,6 +201,7 @@ export const useLuckyStore = defineStore('lucky', () => {
     ticketStatus,
     sourceLabel,
     reveal,
+    setDigit,
     setDigitDistribution,
     setAllDistributions,
     seedRng,
