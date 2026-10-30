@@ -1,7 +1,11 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: ['@vueuse/nuxt/module', '@bootstrap-vue-next/nuxt', '@sidebase/nuxt-auth'],
-  css: ['bootstrap/dist/css/bootstrap.min.css', 'katex/dist/katex.min.css'],
+  modules: ['@pinia/nuxt', '@vueuse/nuxt/module', '@bootstrap-vue-next/nuxt', '@sidebase/nuxt-auth'],
+  css: [
+    'bootstrap/dist/css/bootstrap.min.css',
+    'katex/dist/katex.min.css',
+    '~/assets/scss/main.scss'
+  ],
   auth: {
     baseURL: process.env.AUTH_ORIGIN || 'http://localhost:3000/api/auth',
     provider: {

@@ -185,17 +185,17 @@ const chartOption = computed(() => {
   <figure class="mb-0">
     <figcaption class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-2">
       <div>
-        <p class="small font-monospace fw-bolder text-danger mb-1">DISTRIBUTION / 概率分布</p>
+        <p class="kicker mb-1">DISTRIBUTION / 概率分布</p>
         <p class="h5 fw-bolder mb-0">{{ distribution.xLabel }}</p>
       </div>
-      <div class="d-flex flex-wrap gap-2 font-monospace small">
-        <span class="badge text-bg-dark">{{ distribution.currentLabel }}</span>
-        <span class="badge text-bg-warning text-dark border border-dark">事件：{{ distribution.eventLabel }}</span>
+      <div class="d-flex flex-wrap gap-2">
+        <BBadge variant="dark">{{ distribution.currentLabel }}</BBadge>
+        <BBadge variant="warning">事件：{{ distribution.eventLabel }}</BBadge>
       </div>
     </figcaption>
 
     <div
-      class="ratio ratio-16x9 bg-white border border-2 border-dark"
+      class="chart-frame ratio ratio-16x9"
       role="img"
       :aria-label="`${distribution.xLabel}的概率分布。${distribution.currentLabel}。事件：${distribution.eventLabel}。`"
     >
@@ -204,17 +204,17 @@ const chartOption = computed(() => {
       </div>
     </div>
 
-    <div class="d-flex flex-wrap align-items-center gap-3 font-monospace small mt-2">
+    <div class="chart-legend d-flex flex-wrap align-items-center gap-3 mt-2">
       <span class="d-inline-flex align-items-center gap-1">
-        <span class="badge bg-warning border border-dark" aria-hidden="true">&nbsp;</span>
+        <span class="legend-swatch legend-swatch--event" aria-hidden="true" />
         事件区间
       </span>
       <span class="d-inline-flex align-items-center gap-1">
-        <span class="badge bg-danger border border-dark" aria-hidden="true">&nbsp;</span>
+        <span class="legend-swatch legend-swatch--current" aria-hidden="true" />
         本注
       </span>
       <span class="d-inline-flex align-items-center gap-1">
-        <span class="badge bg-secondary-subtle border border-dark" aria-hidden="true">&nbsp;</span>
+        <span class="legend-swatch legend-swatch--other" aria-hidden="true" />
         其他取值
       </span>
     </div>
