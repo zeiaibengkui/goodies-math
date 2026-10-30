@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import MathFormula from '~/components/math/math-formula.vue'
 import { useLuckyStore } from '~/stores/lucky'
-import { useUiStore } from '~/stores/ui'
 import {
   analyzeLuckyInformation,
   FIXED_ODDS,
@@ -10,7 +9,6 @@ import {
 } from '~/utils/entropy'
 
 const lucky = useLuckyStore()
-const ui = useUiStore()
 const luckyInfo = computed(() => analyzeLuckyInformation(lucky.digits))
 const luckyRatio = computed(() => luckyInfo.value.bits / REAL_INFORMATION_BITS)
 const ratioPercent = computed(() => `${(luckyRatio.value * 100).toFixed(2)}%`)
@@ -30,14 +28,6 @@ function formatBits(value: number) {
 function formatRatio(value: number) {
   return `${(value * 100).toFixed(2)}%`
 }
-
-function revealDetails() {
-  ui.revealDetails()
-  if (!import.meta.client) return
-  void nextTick(() => {
-    document.getElementById('distributions')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  })
-}
 </script>
 
 <template>
@@ -45,7 +35,7 @@ function revealDetails() {
     <BContainer>
       <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-4">
         <div class="flex-grow-1">
-          <p class="kicker">01 / 信息熵</p>
+          <p class="kicker">02 / 信息熵</p>
           <h2 class="display-5 fw-bolder mb-0">
             幸运，<span class="text-primary">有多少比特？</span>
           </h2>
@@ -129,13 +119,9 @@ function revealDetails() {
         </table>
       </div>
 
-      <p class="entropy-note mb-4">
+      <p class="entropy-note mb-0">
         四个事件并不互斥；幸运比特取本注命中事件中自信息最大的一个，只用于与真实信息熵比较。
       </p>
-
-      <BButton v-if="!ui.showDetails" variant="dark" @click="revealDetails">
-        查看详情 / 逐位分布与数字映射 <span aria-hidden="true">↓</span>
-      </BButton>
     </BContainer>
   </section>
 </template>

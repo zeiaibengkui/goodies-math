@@ -2,11 +2,11 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 
 export const useUiStore = defineStore('ui', () => {
-  const showDetails = ref(false)
+  const expertMode = ref(false)
 
-  function revealDetails() {
-    showDetails.value = true
+  function toggleExpertMode() {
+    expertMode.value = !expertMode.value
   }
 
-  return { showDetails, revealDetails }
+  return { expertMode, toggleExpertMode }
 })

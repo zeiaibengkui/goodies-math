@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import MathFormula from '~/components/math/math-formula.vue'
+import { useSectionScroll } from '~/composables/useSectionScroll'
 import { useLuckyStore } from '~/stores/lucky'
+import { useUiStore } from '~/stores/ui'
 import {
   DIGIT_DISTRIBUTIONS,
   DISTRIBUTION_OPTIONS,
@@ -8,6 +10,8 @@ import {
 } from '~/utils/distributions'
 
 const lucky = useLuckyStore()
+const ui = useUiStore()
+const { scrollIntoNextSection } = useSectionScroll()
 const numberInput = ref('')
 const inputError = ref('')
 
@@ -16,13 +20,6 @@ watch(numberInput, (value) => {
   if (sanitized !== value) numberInput.value = sanitized
   if (inputError.value) inputError.value = ''
 })
-
-function scrollToLucky() {
-  if (!import.meta.client) return
-  void nextTick(() => {
-    document.getElementById('lucky-reading')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  })
-}
 
 function readNumber() {
   const value = numberInput.value.trim()
@@ -37,7 +34,7 @@ function readNumber() {
     value.split('').map((digit) => Number(digit)),
     'custom'
   )
-  scrollToLucky()
+  void scrollIntoNextSection()
 }
 
 function setDigit(index: number, value: unknown) {
@@ -69,17 +66,17 @@ function formatSeedTimestamp(timestamp: number) {
     <BContainer>
       <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-4">
         <div class="flex-grow-1">
-          <p class="kicker">02 / 逐位概率分布</p>
+          <p class="kicker">01 / 生成设置</p>
           <h2 class="display-5 fw-bolder mb-0">
             每个位置，<br class="d-lg-none"><span class="text-primary">有自己的命。</span>
           </h2>
         </div>
-        <p class="section-meta d-none d-lg-block mb-1">PER-DIGIT DISTRIBUTIONS</p>
+        <p class="section-meta d-none d-lg-block mb-1">GENERATION / PER-DIGIT</p>
       </div>
 
       <p class="section-lead mb-4">
-        真实中奖号码为均匀分布，因此分析采用均匀分布。你可以直接输入整串号码，或在下方逐位选择数字；
-        也可以把任意一位改成二项、泊松或正态分布，开号器会按该位置的分布独立抽样。
+        真实中奖号码为均匀分布，因此分析采用均匀分布。你可以直接输入整串号码；
+        开启顶部导航的「专家模式」后，还能逐位选择数字、改写概率分布，并按该分布独立开号。
         数学注脚仍以均匀 0–9 为基线，便于对照。
       </p>
 
@@ -119,13 +116,14 @@ function formatSeedTimestamp(timestamp: number) {
               {{ inputError }}
             </p>
             <p v-else id="lucky-number-help" class="small text-white-50 mt-2 mb-0">
-              恰好 10 位数字，允许前导 0。填入后也可以在下方逐位微调。
+              恰好 10 位数字，允许前导 0。
+              {{ ui.expertMode ? '填入后也可以在下方逐位微调。' : '填入后直接查看信息熵与预言。' }}
             </p>
           </div>
         </div>
       </form>
 
-      <div class="panel distribution-studio">
+      <div v-if="ui.expertMode" class="panel distribution-studio">
         <BRow class="g-3 row-cols-2 row-cols-md-3 row-cols-xl-5">
           <BCol
             v-for="(distributionId, index) in lucky.digitDistributions"
@@ -233,6 +231,18 @@ function formatSeedTimestamp(timestamp: number) {
             重新播种
           </BButton>
         </div>
+      </div>
+
+      <div v-else class="expert-hint">
+        <div>
+          <p class="kicker mb-1">STANDARD MODE / 标准模式</p>
+          <p class="mb-0">
+            当前每位按均匀 0–9 独立抽样。需要逐位选择数字、改写概率分布或查看种子时，开启专家模式。
+          </p>
+        </div>
+        <BButton variant="dark" size="sm" @click="ui.toggleExpertMode()">
+          开启专家模式
+        </BButton>
       </div>
     </BContainer>
   </section>

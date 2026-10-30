@@ -1,28 +1,18 @@
 <script setup lang="ts">
+import { useSectionScroll } from '~/composables/useSectionScroll'
 import { useLuckyStore } from '~/stores/lucky'
-import { useUiStore } from '~/stores/ui'
 
 const lucky = useLuckyStore()
-const ui = useUiStore()
-
-function scrollToLucky() {
-  if (!import.meta.client) return
-  void nextTick(() => {
-    document.getElementById('lucky-reading')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  })
-}
+const { scrollIntoNextSection } = useSectionScroll()
 
 function openNumberInput(event: MouseEvent) {
   event.preventDefault()
-  ui.revealDetails()
-  void nextTick(() => {
-    document.getElementById('distributions')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  })
+  void scrollIntoNextSection()
 }
 
 async function drawAndScroll() {
   const nextDigits = await lucky.draw()
-  if (nextDigits) scrollToLucky()
+  if (nextDigits) void scrollIntoNextSection('entropy')
 }
 
 function digitTileClass(digit: number) {

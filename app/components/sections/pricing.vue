@@ -1,17 +1,14 @@
 <script setup lang="ts">
 import { plans, type Plan } from '~~/shared/plans'
+import { useSectionScroll } from '~/composables/useSectionScroll'
+import { useAccountStore } from '~/stores/account'
 
-const {
-  status: authStatus,
-  data: authSession,
-  signIn,
-  signOut,
-  getSession
-} = useAuth()
+const account = useAccountStore()
+const { signIn } = useAuth()
+const { scrollIntoNextSection } = useSectionScroll()
 
 const selectedPlan = ref<Plan | null>(null)
 const pendingPlan = ref<Plan | null>(null)
-const currentPlanId = ref<Plan['id'] | null>(null)
 const planMessage = ref('')
 const authMode = ref<'login' | 'register'>('login')
 const authName = ref('')
@@ -20,14 +17,11 @@ const authPassword = ref('')
 const authError = ref('')
 const authPending = ref(false)
 
-const isAuthenticated = computed(() => authStatus.value === 'authenticated')
-const currentPlan = computed(() => plans.find((plan) => plan.id === currentPlanId.value) ?? null)
+const isAuthenticated = computed(() => account.isAuthenticated)
+const currentPlan = computed(() => account.currentPlan)
 
 function scrollToLucky() {
-  if (!import.meta.client) return
-  void nextTick(() => {
-    document.getElementById('lucky-reading')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  })
+  void scrollIntoNextSection('lucky-reading')
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -38,16 +32,6 @@ function getErrorMessage(error: unknown, fallback: string) {
   return fallback
 }
 
-async function loadCurrentPlan() {
-  try {
-    const result = await $fetch<{ plan: { id: string } | null }>('/api/plans/current')
-    const plan = result.plan ? plans.find((item) => item.id === result.plan?.id) : null
-    currentPlanId.value = plan?.id ?? null
-  } catch {
-    currentPlanId.value = null
-  }
-}
-
 async function selectPlan(plan: Plan) {
   planMessage.value = ''
   try {
@@ -55,7 +39,7 @@ async function selectPlan(plan: Plan) {
       method: 'POST',
       body: { planId: plan.id }
     })
-    currentPlanId.value = plan.id
+    account.currentPlanId = plan.id
     selectedPlan.value = plan
     planMessage.value = `已将「${plan.name}」保存到你的账户。`
   } catch (error) {
@@ -75,8 +59,7 @@ async function choosePlan(plan: Plan) {
   if (!isAuthenticated.value) {
     pendingPlan.value = plan
     authError.value = `登录后会自动保存「${plan.name}」方案。`
-    await nextTick()
-    document.getElementById('account-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    await scrollIntoNextSection('account-panel')
     return
   }
 
@@ -117,8 +100,7 @@ async function submitAuth() {
     }
 
     authPassword.value = ''
-    await getSession()
-    await loadCurrentPlan()
+    await account.refresh()
 
     if (pendingPlan.value) {
       const plan = pendingPlan.value
@@ -136,44 +118,8 @@ async function logout() {
   selectedPlan.value = null
   pendingPlan.value = null
   planMessage.value = ''
-
-  try {
-    await signOut({ callbackUrl: '/', redirect: false })
-  } catch {
-    const { csrfToken } = await $fetch<{ csrfToken: string }>('/api/auth/csrf')
-    await $fetch('/api/auth/signout', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        csrfToken,
-        callbackUrl: '/',
-        json: 'true'
-      })
-    })
-  }
-
-  currentPlanId.value = null
-  await getSession()
-
-  if (import.meta.client) {
-    window.location.assign('/')
-  }
+  await account.logout()
 }
-
-watch(
-  authStatus,
-  async (status) => {
-    if (!import.meta.client) return
-    if (status === 'authenticated') {
-      await loadCurrentPlan()
-    } else if (status === 'unauthenticated') {
-      currentPlanId.value = null
-    }
-  },
-  { immediate: true }
-)
 </script>
 
 <template>
@@ -204,7 +150,11 @@ watch(
         >
           <div>
             <p class="kicker kicker--warning mb-1">ACCOUNT / 账户</p>
-            <p class="h5 fw-bolder mb-1">{{ authSession?.user?.email }}</p>
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+              <p class="h5 fw-bolder mb-0">{{ account.displayName }}</p>
+              <BBadge variant="warning">{{ account.planLabel }}</BBadge>
+            </div>
+            <p class="small text-white-50 mb-1">{{ account.user?.email }}</p>
             <p class="small text-white-50 mb-0">
               当前方案：
               <span class="text-warning fw-bolder">{{ currentPlan?.name ?? '未选择付费方案' }}</span>
