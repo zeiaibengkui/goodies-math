@@ -13,15 +13,57 @@ import { useUiStore } from '~/stores/ui'
 
 const lucky = useLuckyStore()
 const ui = useUiStore()
+let revealObserver: IntersectionObserver | null = null
+let revealMutation: MutationObserver | null = null
+
+function initReveal() {
+  const viewportHeight = window.innerHeight
+
+  document.querySelectorAll('.band').forEach((band) => {
+    const rect = band.getBoundingClientRect()
+    if (rect.top < viewportHeight && rect.bottom > 0) {
+      band.classList.add('is-visible')
+    }
+  })
+
+  document.documentElement.classList.add('motion-ready')
+
+  revealObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue
+        entry.target.classList.add('is-visible')
+        revealObserver?.unobserve(entry.target)
+      }
+    },
+    { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
+  )
+
+  const observeBands = () => {
+    document.querySelectorAll('.band:not(.is-visible)').forEach((band) => {
+      revealObserver?.observe(band)
+    })
+  }
+
+  observeBands()
+  revealMutation = new MutationObserver(observeBands)
+  const main = document.querySelector('main')
+  if (main) revealMutation.observe(main, { childList: true })
+}
 
 onMounted(() => {
   if (!import.meta.client) return
   if (['#distributions', '#number-mappings'].includes(window.location.hash)) {
     ui.revealDetails()
   }
+  initReveal()
 })
 
-onBeforeUnmount(() => lucky.cancelDraw())
+onBeforeUnmount(() => {
+  lucky.cancelDraw()
+  revealObserver?.disconnect()
+  revealMutation?.disconnect()
+})
 
 useHead({
   title: '拾光概率室 · 十位号码的幸运预言与离散数学',
