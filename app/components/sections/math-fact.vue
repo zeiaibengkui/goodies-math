@@ -2,6 +2,7 @@
 import MathFormula from '~/components/math/math-formula.vue'
 import ProbabilityChart from '~/components/math/probability-chart.vue'
 import type { DistributionPoint, FactDistribution } from '~/types/probability'
+import { FIXED_ODDS } from '~/utils/entropy'
 import { formatPercent } from '~/utils/format'
 import { analyzeLucky } from '~/utils/lucky'
 import { useLuckyStore } from '~/stores/lucky'
@@ -143,29 +144,6 @@ function makeDistribution(options: DistributionOptions): FactDistribution {
     ...(options.marker ? { marker: options.marker } : {})
   }
 }
-
-const fixedOdds = [
-  {
-    label: '至少出现一个 8',
-    formula: '1 - \\left(\\frac{9}{10}\\right)^{10}',
-    value: '65.13%'
-  },
-  {
-    label: '至少一对数字重复',
-    formula: '1 - \\frac{10!}{10^{10}}',
-    value: '99.96%'
-  },
-  {
-    label: '十位数字全部不同',
-    formula: '\\frac{10!}{10^{10}}',
-    value: '0.0363%'
-  },
-  {
-    label: '十位号码是回文',
-    formula: '\\frac{10^5}{10^{10}}',
-    value: '0.001%'
-  }
-]
 
 const factBuilders: FactBuilder[] = [
   (draw) => {
@@ -490,7 +468,7 @@ watch(
 
             <div class="p-3 flex-grow-1 d-flex flex-column">
               <div
-                v-for="item in fixedOdds"
+                v-for="item in FIXED_ODDS"
                 :key="item.label"
                 class="odds-item"
               >

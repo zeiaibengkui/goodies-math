@@ -1,12 +1,22 @@
 <script setup lang="ts">
 import { useLuckyStore } from '~/stores/lucky'
+import { useUiStore } from '~/stores/ui'
 
 const lucky = useLuckyStore()
+const ui = useUiStore()
 
 function scrollToLucky() {
   if (!import.meta.client) return
   void nextTick(() => {
     document.getElementById('lucky-reading')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
+}
+
+function openNumberInput(event: MouseEvent) {
+  event.preventDefault()
+  ui.revealDetails()
+  void nextTick(() => {
+    document.getElementById('distributions')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   })
 }
 
@@ -48,7 +58,7 @@ function digitTileClass(digit: number) {
               <span class="ms-3" aria-hidden="true">{{ lucky.isDrawing ? '···' : '→' }}</span>
             </BButton>
 
-            <a href="#lucky-reading" class="btn btn-outline-dark">
+            <a href="#distributions" class="btn btn-outline-dark" @click="openNumberInput">
               输入我的号码 <span aria-hidden="true">↓</span>
             </a>
           </div>

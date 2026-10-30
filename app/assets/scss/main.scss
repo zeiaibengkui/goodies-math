@@ -75,6 +75,91 @@ section[id],
     border-top: 4px solid $dark;
     border-bottom: 4px solid $dark;
   }
+
+  &--entropy {
+    background: var(--bs-body-bg);
+    border-bottom: 4px solid $dark;
+  }
+}
+
+.entropy-card {
+  height: 100%;
+  padding: 1rem;
+  background: #fff;
+  border: 3px solid $dark;
+
+  &--ratio {
+    background: $warning;
+  }
+}
+
+.entropy-label {
+  margin-bottom: 0.5rem;
+  font-family: var(--bs-font-monospace);
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: $danger;
+}
+
+.entropy-value {
+  margin-bottom: 0.5rem;
+  font-family: var(--bs-font-monospace);
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1;
+  color: $dark;
+}
+
+.entropy-note {
+  margin-bottom: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--bs-secondary-color);
+}
+
+.entropy-formula {
+  margin-top: 0.75rem;
+}
+
+.entropy-meter {
+  height: 1.25rem;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  background: #fff;
+  border: 3px solid $dark;
+}
+
+.entropy-meter__fill {
+  height: 100%;
+  background: $primary;
+}
+
+.entropy-table-wrap {
+  margin-bottom: 0.75rem;
+  overflow-x: auto;
+  border: 3px solid $dark;
+}
+
+.entropy-table {
+  width: 100%;
+  margin-bottom: 0;
+  font-family: var(--bs-font-monospace);
+  font-size: 0.875rem;
+
+  th,
+  td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid rgba(23, 18, 11, 0.2);
+  }
+
+  th {
+    font-weight: 800;
+    background: $warning;
+    border-bottom: 2px solid $dark;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
 }
 
 .kicker {

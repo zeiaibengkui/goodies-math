@@ -2,14 +2,24 @@
 import AppFooter from '~/components/app/footer.vue'
 import AppNav from '~/components/app/nav.vue'
 import DigitDistributionsSection from '~/components/sections/distributions.vue'
+import EntropySection from '~/components/sections/entropy.vue'
 import HeroSection from '~/components/sections/hero.vue'
 import LuckyReadingSection from '~/components/sections/lucky-reading.vue'
 import MathFactSection from '~/components/sections/math-fact.vue'
 import NumberMappingsSection from '~/components/sections/number-mappings.vue'
 import PricingSection from '~/components/sections/pricing.vue'
 import { useLuckyStore } from '~/stores/lucky'
+import { useUiStore } from '~/stores/ui'
 
 const lucky = useLuckyStore()
+const ui = useUiStore()
+
+onMounted(() => {
+  if (!import.meta.client) return
+  if (['#distributions', '#number-mappings'].includes(window.location.hash)) {
+    ui.revealDetails()
+  }
+})
 
 onBeforeUnmount(() => lucky.cancelDraw())
 
@@ -33,10 +43,11 @@ useHead({
       <AppNav />
       <main class="flex-grow-1">
         <HeroSection />
-        <DigitDistributionsSection />
+        <EntropySection />
+        <DigitDistributionsSection v-if="ui.showDetails" />
         <LuckyReadingSection />
         <MathFactSection />
-        <NumberMappingsSection />
+        <NumberMappingsSection v-if="ui.showDetails" />
         <PricingSection />
       </main>
       <AppFooter />
