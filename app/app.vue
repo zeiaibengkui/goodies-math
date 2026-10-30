@@ -1,4 +1,12 @@
 <script setup lang="ts">
+import AppFooter from '~/footer.vue'
+import AppNav from '~/nav.vue'
+import DigitDistributionsSection from '~/distributions.vue'
+import HeroSection from '~/hero.vue'
+import LuckyReadingSection from '~/lucky-reading.vue'
+import MathFactSection from '~/math-fact.vue'
+import NumberMappingsSection from '~/number-mappings.vue'
+import PricingSection from '~/pricing.vue'
 import { useLuckyStore } from '~/stores/lucky'
 
 const lucky = useLuckyStore()
