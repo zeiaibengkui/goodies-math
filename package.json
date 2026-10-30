@@ -1,0 +1,24 @@
+{
+  "name": "goodies-math",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@bootstrap-vue-next/nuxt": "^1.0.0",
+    "@vueuse/nuxt": "15.0.0",
+    "bootstrap": "^5.3.8",
+    "bootstrap-vue-next": "^1.2.2",
+    "echarts": "^6.1.0",
+    "katex": "^0.19.1",
+    "nuxt": "^4.6.3",
+    "vue": "^3.5.44",
+    "vue-echarts": "^8.3.2",
+    "vue-router": "^5.4.0"
+  }
+}
