@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import MathFormula from '~/components/math/math-formula.vue'
+import ProbabilityChart from '~/components/math/probability-chart.vue'
 import type { DistributionPoint, FactDistribution } from '~/types/probability'
 import { formatPercent } from '~/utils/format'
 import { analyzeLucky } from '~/utils/lucky'

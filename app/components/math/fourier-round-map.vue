@@ -4,6 +4,7 @@ import { AriaComponent, GridComponent, LegendComponent, TooltipComponent } from 
 import { use } from 'echarts/core'
 import { SVGRenderer } from 'echarts/renderers'
 import VChart from 'vue-echarts'
+import MathFormula from '~/components/math/math-formula.vue'
 
 use([BarChart, LineChart, AriaComponent, GridComponent, LegendComponent, TooltipComponent, SVGRenderer])
 

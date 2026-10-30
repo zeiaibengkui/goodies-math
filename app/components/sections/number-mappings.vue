@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import FourierRoundMap from '~/components/math/fourier-round-map.vue'
+import KmpFailMap from '~/components/math/kmp-fail-map.vue'
+import ManacherMap from '~/components/math/manacher-map.vue'
 import { useLuckyStore } from '~/stores/lucky'
 
 const lucky = useLuckyStore()

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MathFormula from '~/components/math/math-formula.vue'
 import { useLuckyStore } from '~/stores/lucky'
 import {
   DIGIT_DISTRIBUTIONS,

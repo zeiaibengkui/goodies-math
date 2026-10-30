@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import MathFormula from '~/components/math/math-formula.vue'
+
 const props = defineProps<{
   digits: number[]
 }>()
